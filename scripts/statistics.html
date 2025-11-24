@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html>
+<body>
+<h2>統計：散布図・平均アニメーション</h2>
+<canvas id="cv" width="600" height="400" style="border:1px solid #ccc;"></canvas>
+<script>
+const cv=document.getElementById("cv");
+const ctx=cv.getContext("2d");
+
+let points=[];
+let t=0;
+
+function draw(){
+  ctx.clearRect(0,0,600,400);
+
+  if(points.length < 200){
+    let x = (Math.random()-0.5)*4;
+    let y = 0.7*x + (Math.random()-0.5);
+    points.push({x,y});
+  }
+
+  ctx.fillStyle="blue";
+  for(let p of points){
+    let px = p.x*80 + 300;
+    let py = 200 - p.y*80;
+    ctx.beginPath();
+    ctx.arc(px,py,3,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  if(points.length>10){
+    let mx = points.reduce((a,b)=>a+b.x,0)/points.length;
+    let my = points.reduce((a,b)=>a+b.y,0)/points.length;
+
+    ctx.fillStyle="red";
+    ctx.beginPath();
+    ctx.arc(mx*80+300, 200-my*80, 6, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+
+<!DOCTYPE html>
+<html>
+<body>
+<h2>行列：回転アニメーション</h2>
+<canvas id="cv" width="500" height="500" style="border:1px solid #ccc;"></canvas>
+<script>
+const cv=document.getElementById("cv");
+const ctx=cv.getContext("2d");
+
+let t=0;
+function draw(){
+  ctx.clearRect(0,0,500,500);
+  ctx.save();
+  ctx.translate(250,250);
+
+  const N=40;
+  ctx.fillStyle="blue";
+  for(let i=0;i<N;i++){
+    const ang = (i/N)*Math.PI*2;
+    let x = Math.cos(ang)*150;
+    let y = Math.sin(ang)*150;
+
+    let xr = x*Math.cos(t) - y*Math.sin(t);
+    let yr = x*Math.sin(t) + y*Math.cos(t);
+
+    ctx.beginPath();
+    ctx.arc(xr, yr, 4, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+  t+=0.01;
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>Math Visual Lab | KGNINJA</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<h1>Math Visual Lab（行列・微分・積分・確率・統計）</h1>
+
+<nav>
+  <button onclick="loadFrame('scripts/matrix.html')">行列</button>
+  <button onclick="loadFrame('scripts/differentiation.html')">微分</button>
+  <button onclick="loadFrame('scripts/integration.html')">積分</button>
+  <button onclick="loadFrame('scripts/probability.html')">確率</button>
+  <button onclick="loadFrame('scripts/statistics.html')">統計</button>
+</nav>
+
+<iframe id="viewer"
+  src="scripts/matrix.html"
+  sandbox="allow-scripts allow-same-origin"></iframe>
+
+<script>
+function loadFrame(page) {
+  document.getElementById("viewer").src = page;
+}
+</script>
+
+</body>
+</html>

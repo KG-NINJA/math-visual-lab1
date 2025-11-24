@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html>
+<body>
+<h2>積分：面積アニメーション</h2>
+<canvas id="cv" width="600" height="300" style="border:1px solid #ccc;"></canvas>
+<script>
+const cv=document.getElementById("cv");
+const ctx=cv.getContext("2d");
+
+function f(x){ return x*x; }
+
+let xmax = 0;
+
+function draw(){
+  ctx.clearRect(0,0,600,300);
+
+  ctx.beginPath();
+  ctx.moveTo(0,150 - f(0)*20);
+  for(let px=0; px<600; px++){
+    let x = px/200;
+    ctx.lineTo(px, 150 - f(x)*20);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(0,150,255,0.3)";
+  ctx.beginPath();
+  ctx.moveTo(0,150);
+  for(let px=0; px<600; px++){
+    let x = px/200;
+    if(x <= xmax){
+      ctx.lineTo(px, 150 - f(x)*20);
+    }
+  }
+  ctx.lineTo(xmax*200,150);
+  ctx.fill();
+
+  xmax += 0.01;
+  if(xmax>3) xmax=0;
+
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

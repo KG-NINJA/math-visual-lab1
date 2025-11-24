@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html>
+<body>
+<h2>微分：接線アニメーション</h2>
+<canvas id="cv" width="600" height="300" style="border:1px solid #ccc;"></canvas>
+<script>
+const cv=document.getElementById("cv");
+const ctx=cv.getContext("2d");
+
+let xPos = -2;
+function f(x){ return x*x; }
+function slope(x){ return 2*x; }
+
+function draw(){
+  ctx.clearRect(0,0,600,300);
+
+  ctx.beginPath();
+  ctx.moveTo(0,150 - f(-3)*20);
+  for(let px=0; px<600; px++){
+    let x = (px-300)/100;
+    let y = f(x);
+    ctx.lineTo(px, 150 - y*20);
+  }
+  ctx.stroke();
+
+  let y = f(xPos);
+  let m = slope(xPos);
+
+  ctx.fillStyle="red";
+  ctx.beginPath();
+  let px = xPos*100 + 300;
+  let py = 150 - y*20;
+  ctx.arc(px, py, 6, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle="orange";
+  ctx.beginPath();
+  ctx.moveTo(px-100, py - m*(-1)*100);
+  ctx.lineTo(px+100, py - m*(1)*100);
+  ctx.stroke();
+
+  xPos += 0.03;
+  if(xPos>2) xPos=-2;
+
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

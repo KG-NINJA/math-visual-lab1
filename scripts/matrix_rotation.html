@@ -1,0 +1,21 @@
+
+<!DOCTYPE html><html><body>
+<h2>行列アニメーション（デモ）</h2>
+<canvas id="cv" width="400" height="400" style="border:1px solid gray;"></canvas>
+<script>
+const cv=document.getElementById("cv");const ctx=cv.getContext("2d");
+let t=0;
+function draw(){
+  ctx.clearRect(0,0,400,400);
+  ctx.save();
+  ctx.translate(200,200);
+  ctx.rotate(t);
+  ctx.fillStyle="blue";
+  ctx.fillRect(-50,-5,100,10);
+  ctx.restore();
+  t+=0.02;
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body></html>
