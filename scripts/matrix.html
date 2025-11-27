@@ -1,39 +1,211 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>行列ビジュアライザ</title>
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    body { padding: 16px; }
+    .panel { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; }
+    canvas { width: 100%; height: 420px; border-radius: 12px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .controls { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.04); }
+    .controls h3 { margin-top: 0; }
+    label { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #374151; }
+    input[type="range"] { width: 100%; }
+    .matrix { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+    .matrix input { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #d1d5db; text-align: center; }
+    .hint { background: #eef2ff; border-radius: 10px; padding: 10px; color: #312e81; font-size: 14px; line-height: 1.5; margin-top: 10px; }
+    .contrast .controls { background: #0b1021; border-color: #374151; }
+  </style>
+</head>
 <body>
-<h2>行列：回転アニメーション</h2>
-<canvas id="cv" width="500" height="500" style="border:1px solid #ccc;"></canvas>
+  <h2>行列：回転・拡大縮小を手で確かめる</h2>
+  <p>2×2 行列で作る線形変換をベクトルと格子で視覚化します。角度と拡大率を変えて「形がどう変わるか」を確認してください。</p>
+  <div class="panel">
+    <canvas id="matrixCanvas" width="640" height="420" aria-label="行列変換のキャンバス"></canvas>
+    <div class="controls">
+      <h3>変換パラメータ</h3>
+      <label>回転角度 (度)
+        <input id="angle" type="range" min="-180" max="180" value="30" />
+      </label>
+      <label>横方向の拡大率
+        <input id="scaleX" type="range" min="0.2" max="2.5" step="0.1" value="1.2" />
+      </label>
+      <label>縦方向の拡大率
+        <input id="scaleY" type="range" min="0.2" max="2.5" step="0.1" value="0.9" />
+      </label>
+      <div class="matrix" aria-label="行列要素">
+        <input id="m11" type="number" step="0.01" aria-label="m11" />
+        <input id="m12" type="number" step="0.01" aria-label="m12" />
+        <input id="m21" type="number" step="0.01" aria-label="m21" />
+        <input id="m22" type="number" step="0.01" aria-label="m22" />
+      </div>
+      <div class="note-actions" style="margin-top:10px;">
+        <button id="reset">リセット</button>
+        <label class="small-label" style="margin-left:auto;">自動回転 <input type="checkbox" id="autoRotate"></label>
+      </div>
+      <div class="hint">
+        <strong>見どころ</strong>
+        <ul style="padding-left:18px; margin:6px 0;">
+          <li>紫の格子が「変換された座標」を示します。正方形が平行四辺形に変形します。</li>
+          <li>オレンジの矢印はベクトル <code>(1, 0.5)</code> の移動先。長さと向きの変化に注目。</li>
+          <li>行列の 1 列目と 2 列目は、それぞれ基底ベクトル (1,0) と (0,1) の移動先を表します。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <p style="margin-top:12px;">ヒント：スケールを 0.5 にすると面積が 1/4 になるなど、行列の行列式が「面積の伸び縮み」を示します。角度を 90° に近づけたときの変化も観察してみましょう。</p>
+
 <script>
-const cv=document.getElementById("cv");
-const ctx=cv.getContext("2d");
+const canvas = document.getElementById('matrixCanvas');
+const ctx = canvas.getContext('2d');
+const angleInput = document.getElementById('angle');
+const scaleXInput = document.getElementById('scaleX');
+const scaleYInput = document.getElementById('scaleY');
+const m11 = document.getElementById('m11');
+const m12 = document.getElementById('m12');
+const m21 = document.getElementById('m21');
+const m22 = document.getElementById('m22');
+const autoRotate = document.getElementById('autoRotate');
+const resetBtn = document.getElementById('reset');
 
-let t=0;
-function draw(){
-  ctx.clearRect(0,0,500,500);
-  ctx.save();
-  ctx.translate(250,250);
+let angle = parseFloat(angleInput.value) * Math.PI/180;
+let sx = parseFloat(scaleXInput.value);
+let sy = parseFloat(scaleYInput.value);
+let time = 0;
 
-  const N=40;
-  ctx.fillStyle="blue";
-  for(let i=0;i<N;i++){
-    const ang = (i/N)*Math.PI*2;
-    let x = Math.cos(ang)*150;
-    let y = Math.sin(ang)*150;
+function updateMatrixInputs() {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  m11.value = (cos * sx).toFixed(2);
+  m12.value = (-sin * sy).toFixed(2);
+  m21.value = (sin * sx).toFixed(2);
+  m22.value = (cos * sy).toFixed(2);
+}
 
-    let xr = x*Math.cos(t) - y*Math.sin(t);
-    let yr = x*Math.sin(t) + y*Math.cos(t);
+function getMatrixFromInputs() {
+  return [
+    [parseFloat(m11.value), parseFloat(m12.value)],
+    [parseFloat(m21.value), parseFloat(m22.value)]
+  ];
+}
 
+function applyMatrix(mat, v) {
+  return {
+    x: mat[0][0]*v.x + mat[0][1]*v.y,
+    y: mat[1][0]*v.x + mat[1][1]*v.y
+  };
+}
+
+function drawGrid(color, transformFn) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  for (let i=-5;i<=5;i++) {
     ctx.beginPath();
-    ctx.arc(xr, yr, 4, 0, Math.PI*2);
-    ctx.fill();
+    for (let x=-5; x<=5; x+=0.1) {
+      const p = transformFn({x, y:i});
+      const sx = canvas.width/2 + p.x*60;
+      const sy = canvas.height/2 - p.y*60;
+      if (x === -5) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+  }
+  for (let j=-5;j<=5;j++) {
+    ctx.beginPath();
+    for (let y=-5; y<=5; y+=0.1) {
+      const p = transformFn({x:j, y});
+      const sx = canvas.width/2 + p.x*60;
+      const sy = canvas.height/2 - p.y*60;
+      if (y === -5) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  const mat = getMatrixFromInputs();
+
+  // 背景グリッド
+  drawGrid('#e5e7eb', (v)=>v);
+  drawGrid('#c7d2fe', (v)=>applyMatrix(mat, v));
+
+  // 単位ベクトル
+  const origin = {x: canvas.width/2, y: canvas.height/2};
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#10b981';
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  let iVec = applyMatrix(mat, {x:1,y:0});
+  ctx.lineTo(origin.x + iVec.x*60, origin.y - iVec.y*60);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  let jVec = applyMatrix(mat, {x:0,y:1});
+  ctx.lineTo(origin.x + jVec.x*60, origin.y - jVec.y*60);
+  ctx.stroke();
+
+  // テストベクトル
+  ctx.strokeStyle = '#f97316';
+  ctx.fillStyle = '#f97316';
+  const test = applyMatrix(mat, {x:1, y:0.5});
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  ctx.lineTo(origin.x + test.x*60, origin.y - test.y*60);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(origin.x + test.x*60, origin.y - test.y*60, 6, 0, Math.PI*2);
+  ctx.fill();
+
+  // ラベル
+  ctx.fillStyle = '#111827';
+  ctx.font = '14px Inter, Noto Sans JP, sans-serif';
+  ctx.fillText('i → ('+iVec.x.toFixed(2)+', '+iVec.y.toFixed(2)+')', origin.x + iVec.x*60 + 6, origin.y - iVec.y*60);
+  ctx.fillText('j → ('+jVec.x.toFixed(2)+', '+jVec.y.toFixed(2)+')', origin.x + jVec.x*60 + 6, origin.y - jVec.y*60);
+  ctx.fillText('v=(1,0.5) → ('+test.x.toFixed(2)+', '+test.y.toFixed(2)+')', origin.x + test.x*60 + 6, origin.y - test.y*60 - 10);
+
+  if (autoRotate.checked) {
+    time += 0.01;
+    angleInput.value = ((Math.sin(time) * 0.5 + 0.5) * 180 - 90).toFixed(2);
+    angle = parseFloat(angleInput.value) * Math.PI/180;
+    updateMatrixInputs();
   }
 
-  ctx.restore();
-  t+=0.01;
   requestAnimationFrame(draw);
 }
+
 draw();
+updateMatrixInputs();
+
+angleInput.addEventListener('input', (e)=>{
+  angle = parseFloat(e.target.value) * Math.PI/180;
+  updateMatrixInputs();
+});
+scaleXInput.addEventListener('input', (e)=>{
+  sx = parseFloat(e.target.value);
+  updateMatrixInputs();
+});
+scaleYInput.addEventListener('input', (e)=>{
+  sy = parseFloat(e.target.value);
+  updateMatrixInputs();
+});
+
+[m11,m12,m21,m22].forEach((el)=>{
+  el.addEventListener('change', ()=>{
+    // keep values numeric
+    if (isNaN(parseFloat(el.value))) el.value = '0';
+  });
+});
+
+resetBtn.addEventListener('click', ()=>{
+  angleInput.value = 30;
+  scaleXInput.value = 1.2;
+  scaleYInput.value = 0.9;
+  angle = parseFloat(angleInput.value) * Math.PI/180;
+  updateMatrixInputs();
+});
 </script>
 </body>
 </html>

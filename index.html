@@ -1,31 +1,107 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<title>Math Visual Lab | KGNINJA</title>
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <title>Math Visual Lab | KGNINJA</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Math Visual Lab</p>
+      <h1>動く図とスライダーで「わかる」数学体験</h1>
+      <p class="lede">行列・微分・積分・確率・統計を、手を動かしながら直感的に学べるインタラクティブ教材です。高校〜大学初級レベルの内容を「とりあえず触ってみたい」人向けにまとめました。</p>
+      <ul class="tips">
+        <li>上のタブを押すと学びたいテーマを切り替えられます。</li>
+        <li>画面内のスライダーやボタンを自由に触って、グラフの変化を確認してください。</li>
+        <li>解説ボックスに学習のヒントを表示します。まずは真似してみるだけでも OK！</li>
+      </ul>
+    </div>
+    <div class="hero-card">
+      <p class="hero-title">今日のゴール</p>
+      <ol>
+        <li>図形やグラフの動きから「式が何をしているか」を感じる</li>
+        <li>値を変えたときの変化（感度）をつかむ</li>
+        <li>得た気づきを小さなコメントとしてメモする</li>
+      </ol>
+    </div>
+  </header>
 
-<h1>Math Visual Lab（行列・微分・積分・確率・統計）</h1>
+  <nav class="tabs" aria-label="学習テーマの切り替え">
+    <button class="tab active" data-page="scripts/matrix.html">行列</button>
+    <button class="tab" data-page="scripts/differentiation.html">微分</button>
+    <button class="tab" data-page="scripts/integration.html">積分</button>
+    <button class="tab" data-page="scripts/probability.html">確率</button>
+    <button class="tab" data-page="scripts/statistics.html">統計</button>
+  </nav>
 
-<nav>
-  <button onclick="loadFrame('scripts/matrix.html')">行列</button>
-  <button onclick="loadFrame('scripts/differentiation.html')">微分</button>
-  <button onclick="loadFrame('scripts/integration.html')">積分</button>
-  <button onclick="loadFrame('scripts/probability.html')">確率</button>
-  <button onclick="loadFrame('scripts/statistics.html')">統計</button>
-</nav>
+  <div class="frame-wrapper">
+    <div class="frame-header">
+      <p class="frame-title" id="frameTitle">行列 | 変換の様子を見ながらベクトル操作に慣れる</p>
+      <div class="frame-actions">
+        <label class="small-label">
+          <input type="checkbox" id="highContrastToggle" /> 高コントラスト表示
+        </label>
+      </div>
+    </div>
+    <iframe id="viewer" src="scripts/matrix.html" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
 
-<iframe id="viewer"
-  src="scripts/matrix.html"
-  sandbox="allow-scripts allow-same-origin"></iframe>
+  <section class="notes">
+    <h2>学習メモ（自由記述）</h2>
+    <p>「何が変わった？」「なぜそう思った？」を気軽に書き残すスペースです。ブラウザ上だけで完結するので保存先も安心です。</p>
+    <textarea id="memo" rows="4" placeholder="例：行列のスケールを大きくすると、同時に面積も拡大する。"></textarea>
+    <div class="note-actions">
+      <button id="saveMemo">メモを保存</button>
+      <span id="memoStatus" aria-live="polite"></span>
+    </div>
+  </section>
 
-<script>
-function loadFrame(page) {
-  document.getElementById("viewer").src = page;
-}
-</script>
+  <script>
+    const viewer = document.getElementById('viewer');
+    const frameTitle = document.getElementById('frameTitle');
+    const tabs = document.querySelectorAll('.tab');
+    const memo = document.getElementById('memo');
+    const memoStatus = document.getElementById('memoStatus');
+    const memoKey = 'math-visual-lab-memo';
+    const titles = {
+      'scripts/matrix.html': '行列 | 変換の様子を見ながらベクトル操作に慣れる',
+      'scripts/differentiation.html': '微分 | 接線の傾きと関数の変化を体感する',
+      'scripts/integration.html': '積分 | 面積の足し合わせをアニメーションで理解',
+      'scripts/probability.html': '確率 | サイコロの頻度から長期的な傾向をつかむ',
+      'scripts/statistics.html': '統計 | データのばらつきと平均・相関を観察'
+    };
 
+    const highContrastToggle = document.getElementById('highContrastToggle');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+        const page = tab.dataset.page;
+        viewer.src = page;
+        frameTitle.textContent = titles[page];
+      });
+    });
+
+    function loadMemo() {
+      const saved = localStorage.getItem(memoKey);
+      if (saved) {
+        memo.value = saved;
+      }
+    }
+
+    document.getElementById('saveMemo').addEventListener('click', () => {
+      localStorage.setItem(memoKey, memo.value);
+      memoStatus.textContent = '保存しました（このブラウザのみ有効）';
+      setTimeout(() => memoStatus.textContent = '', 2500);
+    });
+
+    highContrastToggle.addEventListener('change', (e) => {
+      document.body.classList.toggle('contrast', e.target.checked);
+    });
+
+    loadMemo();
+  </script>
 </body>
 </html>
