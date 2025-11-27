@@ -1,10 +1,211 @@
 
+* { box-sizing: border-box; }
 body {
-    font-family: sans-serif;
-    margin: 20px;
-    background: #f5f5f5;
+  font-family: 'Inter', 'Noto Sans JP', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0 16px 40px;
+  background: #f6f7fb;
+  color: #1f2933;
 }
-h1 { text-align:center; margin-bottom:30px; }
-nav { text-align:center; margin-bottom:20px; }
-button { margin:5px; padding:12px 20px; font-size:16px; cursor:pointer; }
-iframe { width:100%; height:80vh; border:1px solid #ccc; background:white; }
+
+.hero {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+  padding: 32px 12px 24px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #6c63ff;
+  margin: 0 0 8px;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 28px;
+  line-height: 1.3;
+}
+
+.lede {
+  margin: 0 0 16px;
+  line-height: 1.6;
+  color: #4b5563;
+}
+
+.tips {
+  padding-left: 18px;
+  margin: 0;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.tips li { margin-bottom: 6px; }
+
+.hero-card {
+  background: linear-gradient(135deg, #6c63ff, #8aa7ff);
+  color: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 12px 30px rgba(108, 99, 255, 0.18);
+}
+
+.hero-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.hero-card ol {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto 16px;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid #d1d5db;
+  flex-wrap: wrap;
+}
+
+.tab {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #374151;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.tab:hover { transform: translateY(-1px); }
+
+.tab.active {
+  background: #6c63ff;
+  color: #fff;
+  border-color: #6c63ff;
+  box-shadow: 0 10px 30px rgba(108, 99, 255, 0.2);
+}
+
+.frame-wrapper {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.frame-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.frame-title {
+  margin: 0;
+  font-weight: 700;
+  color: #111827;
+}
+
+.frame-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.small-label { color: #4b5563; }
+
+iframe {
+  width: 100%;
+  height: 70vh;
+  border: none;
+  background: #fff;
+}
+
+.notes {
+  margin-top: 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+}
+
+.notes h2 { margin-top: 0; }
+
+textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  padding: 12px;
+  font-size: 15px;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.note-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+button {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid #6c63ff;
+  background: #6c63ff;
+  color: #fff;
+  font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:hover { transform: translateY(-1px); }
+
+button:active { transform: translateY(0); }
+
+.contrast body, body.contrast {
+  background: #0b1021;
+  color: #f9fafb;
+}
+
+body.contrast .frame-wrapper,
+body.contrast .notes,
+body.contrast .hero-card,
+body.contrast .tab,
+body.contrast iframe {
+  box-shadow: none;
+}
+
+body.contrast .frame-wrapper,
+body.contrast .notes {
+  border-color: #374151;
+  background: #0b1021;
+}
+
+body.contrast .frame-header { background: #111827; }
+
+body.contrast .tab { background: #111827; color: #e5e7eb; border-color: #374151; }
+body.contrast .tab.active { background: #d946ef; border-color: #d946ef; color: #0b1021; }
+body.contrast textarea { background: #111827; color: #e5e7eb; border-color: #374151; }
+
+@media (max-width: 960px) {
+  .hero { grid-template-columns: 1fr; }
+  iframe { height: 60vh; }
+}

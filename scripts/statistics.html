@@ -1,47 +1,206 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>統計ビジュアライザ</title>
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    body { padding: 16px; }
+    .flex { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+    canvas { width: 100%; height: 380px; border-radius: 12px; border: 1px solid #e5e7eb; background: #f9fafb; }
+    .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; box-shadow: 0 8px 18px rgba(0,0,0,0.05); }
+    .panel h3 { margin-top: 0; }
+    label { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: #374151; }
+    input[type="range"] { width: 100%; }
+    .stats { background: #f3f4f6; border-radius: 8px; padding: 8px; margin-top: 8px; }
+    body.contrast { background: #0b1021; color: #e5e7eb; }
+    body.contrast canvas { background: #111827; border-color: #374151; }
+    body.contrast .panel { background: #0f172a; border-color: #374151; box-shadow: none; }
+    body.contrast .stats { background: #111827; color: #e5e7eb; }
+  </style>
+</head>
 <body>
-<h2>統計：散布図・平均アニメーション</h2>
-<canvas id="cv" width="600" height="400" style="border:1px solid #ccc;"></canvas>
+  <h2>統計：散布図・平均・回帰直線を体感する</h2>
+  <p>データを生成しながら散布図を表示します。ノイズの強さを変えたり、自分で点を追加したりしながら、平均値や相関、回帰直線がどう変わるかを確認できます。残差線の表示でフィット感も視覚的に確認。</p>
+  <div class="flex">
+    <canvas id="statCanvas" width="760" height="380" aria-label="統計キャンバス"></canvas>
+    <div class="panel">
+      <h3>操作パネル</h3>
+      <label>ノイズの強さ（ばらつき）
+        <input id="noise" type="range" min="0" max="1" step="0.05" value="0.35" />
+      </label>
+      <label>自動追加スピード
+        <input id="speed" type="range" min="0" max="4" step="0.5" value="2" />
+      </label>
+      <label>残差（点から回帰線まで）を表示
+        <input id="residualToggle" type="checkbox" checked />
+      </label>
+      <div class="note-actions" style="margin-bottom:8px;">
+        <button id="toggle">一時停止 / 再開</button>
+        <button id="reset">データをリセット</button>
+      </div>
+      <div class="stats" id="statsBox"></div>
+      <div class="hint" style="margin-top:10px;">
+        <strong>観察ポイント</strong>
+        <ul style="padding-left:18px; margin:6px 0;">
+          <li>赤い円：平均（重心）。データが偏ると位置が動きます。</li>
+          <li>紫の線：回帰直線。ノイズを強くすると傾きが小さく（相関が弱く）なります。</li>
+          <li>キャンバスをクリックすると任意の点を追加できます。外れ値が統計値に与える影響を試してみましょう。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
 <script>
-const cv=document.getElementById("cv");
-const ctx=cv.getContext("2d");
+const canvas = document.getElementById('statCanvas');
+const ctx = canvas.getContext('2d');
+const noiseSlider = document.getElementById('noise');
+const speedSlider = document.getElementById('speed');
+const statsBox = document.getElementById('statsBox');
+const toggleBtn = document.getElementById('toggle');
+const resetBtn = document.getElementById('reset');
+const residualToggle = document.getElementById('residualToggle');
 
-let points=[];
-let t=0;
+let points = [];
+let running = true;
+let lastTime = 0;
 
-function draw(){
-  ctx.clearRect(0,0,600,400);
+function addPoint() {
+  const x = (Math.random()-0.5)*4;
+  const baseY = 0.8*x;
+  const noise = (Math.random()-0.5) * 2 * parseFloat(noiseSlider.value);
+  points.push({x, y: baseY + noise});
+}
 
-  if(points.length < 200){
-    let x = (Math.random()-0.5)*4;
-    let y = 0.7*x + (Math.random()-0.5);
-    points.push({x,y});
+function stats() {
+  if (points.length === 0) return {mx:0,my:0,sx:0,sy:0,r:0,a:0,b:0};
+  const mx = points.reduce((s,p)=>s+p.x,0)/points.length;
+  const my = points.reduce((s,p)=>s+p.y,0)/points.length;
+  let cov = 0, vx=0, vy=0;
+  for (const p of points) {
+    cov += (p.x - mx)*(p.y - my);
+    vx += (p.x - mx)**2;
+    vy += (p.y - my)**2;
+  }
+  const sx = Math.sqrt(vx/points.length);
+  const sy = Math.sqrt(vy/points.length);
+  const r = (cov/points.length)/(sx*sy || 1);
+  const slope = cov/(vx || 1);
+  const intercept = my - slope*mx;
+  return {mx,my,sx,sy,r,a:intercept,b:slope};
+}
+
+function transform(p) {
+  return {
+    x: canvas.width/2 + p.x*80,
+    y: canvas.height/2 - p.y*80
+  };
+}
+
+function drawAxes() {
+  ctx.strokeStyle = '#d1d5db';
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height/2);
+  ctx.lineTo(canvas.width, canvas.height/2);
+  ctx.moveTo(canvas.width/2, 0);
+  ctx.lineTo(canvas.width/2, canvas.height);
+  ctx.stroke();
+}
+
+function correlationLabel(r) {
+  if (Math.abs(r) < 0.2) return 'ほぼ相関なし';
+  if (Math.abs(r) < 0.4) return '弱い相関';
+  if (Math.abs(r) < 0.7) return '中程度の相関';
+  return '強い相関';
+}
+
+function draw(time) {
+  if (!lastTime) lastTime = time;
+  const delta = time - lastTime;
+  lastTime = time;
+
+  const speed = parseFloat(speedSlider.value);
+  if (running) {
+    for (let i=0;i<speed;i++) addPoint();
   }
 
-  ctx.fillStyle="blue";
-  for(let p of points){
-    let px = p.x*80 + 300;
-    let py = 200 - p.y*80;
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  drawAxes();
+
+  // 散布図
+  ctx.fillStyle = '#3b82f6';
+  for (const p of points) {
+    const {x,y} = transform(p);
     ctx.beginPath();
-    ctx.arc(px,py,3,0,Math.PI*2);
+    ctx.arc(x,y,3,0,Math.PI*2);
     ctx.fill();
   }
 
-  if(points.length>10){
-    let mx = points.reduce((a,b)=>a+b.x,0)/points.length;
-    let my = points.reduce((a,b)=>a+b.y,0)/points.length;
+  const {mx,my,r,a,b} = stats();
 
-    ctx.fillStyle="red";
-    ctx.beginPath();
-    ctx.arc(mx*80+300, 200-my*80, 6, 0, Math.PI*2);
-    ctx.fill();
+  // 残差線
+  if (residualToggle.checked) {
+    ctx.strokeStyle = 'rgba(248,113,113,0.6)';
+    for (const p of points) {
+      const {x,y} = transform(p);
+      const yLine = transform({x:p.x, y: a + b*p.x}).y;
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      ctx.lineTo(x,yLine);
+      ctx.stroke();
+    }
   }
+
+  // 回帰直線
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  const x1 = -3, x2 = 3;
+  const p1 = transform({x:x1, y: a + b*x1});
+  const p2 = transform({x:x2, y: a + b*x2});
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+
+  // 平均
+  ctx.fillStyle = '#ef4444';
+  const meanPoint = transform({x:mx, y:my});
+  ctx.beginPath();
+  ctx.arc(meanPoint.x, meanPoint.y, 7, 0, Math.PI*2);
+  ctx.fill();
+
+  statsBox.innerHTML = `
+    <div>データ数: ${points.length}</div>
+    <div>平均 (x̄, ȳ) = (${mx.toFixed(2)}, ${my.toFixed(2)})</div>
+    <div>相関係数 r ≈ ${r.toFixed(3)}（${correlationLabel(r)}）</div>
+    <div>回帰直線: y = ${b.toFixed(2)}x ${a>=0?'+':''}${a.toFixed(2)}</div>
+  `;
 
   requestAnimationFrame(draw);
 }
-draw();
+
+canvas.addEventListener('click', (e)=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left - canvas.width/2)/80;
+  const y = -(e.clientY - rect.top - canvas.height/2)/80;
+  points.push({x,y});
+});
+
+toggleBtn.addEventListener('click', ()=>{
+  running = !running;
+});
+
+resetBtn.addEventListener('click', ()=>{
+  points = [];
+});
+
+requestAnimationFrame(draw);
+
+window.addEventListener('message', (event)=>{
+  if (event.data?.type === 'contrast') {
+    document.body.classList.toggle('contrast', event.data.enabled);
+  }
+});
 </script>
 </body>
 </html>

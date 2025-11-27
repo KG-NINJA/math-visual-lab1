@@ -1,37 +1,173 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>確率ビジュアライザ</title>
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    body { padding: 16px; }
+    .wrap { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+    canvas { width: 100%; height: 320px; border-radius: 12px; border: 1px solid #e5e7eb; background: #f9fafb; }
+    .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; box-shadow: 0 8px 18px rgba(0,0,0,0.05); }
+    .panel h3 { margin-top: 0; }
+    label { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: #374151; }
+    input[type="range"] { width: 100%; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 6px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    body.contrast { background: #0b1021; color: #e5e7eb; }
+    body.contrast canvas { background: #111827; border-color: #374151; }
+    body.contrast .panel { background: #0f172a; border-color: #374151; box-shadow: none; }
+    body.contrast table { color: #e5e7eb; }
+  </style>
+</head>
 <body>
-<h2>確率：サイコロの頻度アニメーション</h2>
-<canvas id="cv" width="500" height="300" style="border:1px solid #ccc;"></canvas>
+  <h2>確率：サイコロの頻度が収束する様子を見る</h2>
+  <p>乱数でサイコロを振り続けると、出目の割合が 1/6 に近づいていきます。スピードや試行回数を変えながら、大数の法則を体感しましょう。6 の出やすさを変えて「偏ったサイコロ」の挙動も試せます。</p>
+  <div class="wrap">
+    <canvas id="probCanvas" width="680" height="320" aria-label="確率キャンバス"></canvas>
+    <div class="panel">
+      <h3>操作パネル</h3>
+      <label>一度に振る回数
+        <input id="speed" type="range" min="1" max="500" value="50" />
+      </label>
+      <label>6 の出やすさ（公平=0.167）
+        <input id="bias" type="range" min="0.05" max="0.5" step="0.01" value="0.167" />
+      </label>
+      <div class="note-actions" style="margin-bottom:8px;">
+        <button id="toggle">スタート</button>
+        <button id="reset">リセット</button>
+      </div>
+      <table>
+        <thead><tr><th>出目</th><th>回数</th><th>割合</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="hint" style="margin-top:10px;">
+        <strong>観察ポイント</strong>
+        <ul style="padding-left:18px; margin:6px 0;">
+          <li>紫の点線：理論上の割合（現在設定の期待値）。棒がこの線に近づく様子を観察。</li>
+          <li>試行回数を増やすほど、出目の偏りが小さくなっていきます。</li>
+          <li>偏ったサイコロでは、特定の面が多く出続けることを確認できます。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
 <script>
-const cv=document.getElementById("cv");
-const ctx=cv.getContext("2d");
+const canvas = document.getElementById('probCanvas');
+const ctx = canvas.getContext('2d');
+const speedSlider = document.getElementById('speed');
+const biasSlider = document.getElementById('bias');
+const toggleBtn = document.getElementById('toggle');
+const resetBtn = document.getElementById('reset');
+const tableBody = document.getElementById('tableBody');
 
-let counts=[0,0,0,0,0,0];
-let total=0;
+let running = false;
+let counts = [0,0,0,0,0,0];
+let total = 0;
 
-function draw(){
-  let r=Math.floor(Math.random()*6);
-  counts[r]++;
-  total++;
-
-  ctx.clearRect(0,0,500,300);
-  ctx.fillStyle="black";
-  ctx.font="18px sans-serif";
-  ctx.fillText("試行数: "+total, 20, 30);
-
-  for(let i=0;i<6;i++){
-    let h = counts[i]*2;
-    ctx.fillStyle="blue";
-    ctx.fillRect(50+i*70, 250-h, 40, h);
-    ctx.fillStyle="black";
-    ctx.fillText((i+1)+"", 60+i*70, 270);
-  }
-
-  requestAnimationFrame(draw);
+function probabilities() {
+  const p6 = parseFloat(biasSlider.value);
+  const other = (1 - p6)/5;
+  return [other, other, other, other, other, p6];
 }
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  ctx.fillStyle = '#111827';
+  ctx.font = '15px Inter, Noto Sans JP, sans-serif';
+  ctx.fillText('試行数: '+total, 12, 24);
+  ctx.fillText('平均出目: '+(total ? (counts.reduce((s,c,i)=>s+c*(i+1),0)/total).toFixed(3) : '-'), 12, 44);
+
+  const probs = probabilities();
+  const expectedMax = Math.max(...probs)*total;
+  const maxCount = Math.max(1, ...counts, Math.ceil(expectedMax));
+  const scale = 240 / maxCount;
+
+  // ガイドライン（期待値）
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.setLineDash([6,6]);
+  ctx.beginPath();
+  const guidelineY = canvas.height - (total ? (total*probs[5])*scale : 0) - 60;
+  ctx.moveTo(30, guidelineY);
+  ctx.lineTo(canvas.width-20, guidelineY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#8b5cf6';
+  ctx.fillText('期待値ライン', canvas.width-120, guidelineY-8);
+
+  const barWidth = 60;
+  counts.forEach((c, i) => {
+    const height = c * scale;
+    const x = 40 + i*(barWidth+16);
+    const y = canvas.height - height - 60;
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(x, y, barWidth, height);
+    ctx.fillStyle = '#111827';
+    ctx.fillText((i+1)+'', x+barWidth/2-6, canvas.height-24);
+    // 期待値点
+    ctx.fillStyle = '#a855f7';
+    const expectedHeight = total*probs[i]*scale;
+    ctx.beginPath();
+    ctx.arc(x+barWidth/2, canvas.height - expectedHeight - 60, 4, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+function updateTable() {
+  const probs = probabilities();
+  tableBody.innerHTML = counts.map((c, idx) => {
+    const ratio = total ? (c/total*100).toFixed(2)+'%' : '-';
+    const expect = (probs[idx]*100).toFixed(2)+'%';
+    return `<tr><td>${idx+1}</td><td>${c}</td><td>${ratio} / 期待 ${expect}</td></tr>`;
+  }).join('');
+}
+
+function step() {
+  if (!running) return;
+  const times = parseInt(speedSlider.value, 10);
+  const probs = probabilities();
+  for (let i=0;i<times;i++) {
+    const r = Math.random();
+    let acc = 0;
+    let face = 0;
+    for (; face<6; face++) {
+      acc += probs[face];
+      if (r <= acc) break;
+    }
+    counts[Math.min(face,5)]++; total++;
+  }
+  draw();
+  updateTable();
+  requestAnimationFrame(step);
+}
+
+toggleBtn.addEventListener('click', ()=>{
+  running = !running;
+  toggleBtn.textContent = running ? 'ストップ' : 'スタート';
+  if (running) step();
+});
+
+resetBtn.addEventListener('click', ()=>{
+  counts = [0,0,0,0,0,0];
+  total = 0;
+  draw();
+  updateTable();
+});
+
+biasSlider.addEventListener('input', ()=>{
+  if (!running) draw();
+  updateTable();
+});
+
 draw();
+updateTable();
+
+window.addEventListener('message', (event)=>{
+  if (event.data?.type === 'contrast') {
+    document.body.classList.toggle('contrast', event.data.enabled);
+  }
+});
 </script>
 </body>
 </html>
